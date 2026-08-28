@@ -1,0 +1,11 @@
+[package]
+name = "hllset-attn"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "HLLSet K-storage for attention: KStorage trait over TokenLUT/CatalogLUT, bit key table, and HLLSet-native attention scores"
+
+[dependencies]
+hllset-core = { workspace = true }
+hllset-dsl = { workspace = true }

@@ -1,0 +1,11 @@
+[package]
+name = "hllset-repro"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Phase 0 reproduction transformer: hand-rolled f32 tensor autograd and a small character-level LLM in the token realm"
+
+[dependencies]
+hllset-attn = { workspace = true }
+hllset-core = { workspace = true }

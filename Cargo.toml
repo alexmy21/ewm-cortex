@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["ewm-cortex project"]
+license = "MIT"
+
+[workspace.dependencies]
+# ── Experimental crates (this workspace) ──
+hllset-attn = { path = "crates/hllset-attn" }
+hllset-repro = { path = "crates/hllset-repro" }
+
+# ── Canonical HLLSet framework (path to hllset-next; not modified here) ──
+hllset-core = { path = "../hllset-next/crates/hllset-core" }
+hllset-dsl = { path = "../hllset-next/crates/hllset-dsl" }
+
+[profile.dev]
+opt-level = 1
