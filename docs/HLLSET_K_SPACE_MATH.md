@@ -74,10 +74,21 @@ P(tz = z) = 2^-(z+1)   for z = 0..30
 P(tz = 31) = 2^-31     (tail absorbed by the clamp)
 ```
 
-so the partition is **multiresolution**: `tz = 0` cells are broad (≈ N/2048
-tokens each), `tz = 4` cells are narrow, `tz ≥ 6` cells are mostly
-singletons. The register axis is uniform; the `tz` axis is a coarse-to-fine
-rarity gradient.
+so the partition is **multiresolution** *in expectation over the hash
+space*: a `(reg, tz = z)` cell holds ≈ `N · 2^-(z+11)` tokens
+(`z = 0`: `N/2048`, `z = 4`: `N/32768`, `z ≥ 6`: mostly empty or singleton
+for `N ≈ 50K`). The register axis is uniform; the `tz` axis is a
+coarse-to-fine rarity gradient.
+
+**Hash prior vs token reality.** This is a statement about hash values,
+not about tokens. For an actual vocabulary, the count in a given cell is
+binomial with the expectation above and standard deviation ≈ `√λ` — the
+deviations dominate for small `N`. And for a *corpus*, token occurrences
+are Zipfian, not uniform: the multiplicity-free bitmap records which cells
+are occupied, but not how often. The LUT's **TF field** (`TFVec`, 32768
+entries indexed by bit, monotonic CRDT) records the empirical,
+occurrence-weighted per-bit counts — the data-dependent multiresolution
+that corrects the hash prior exactly where it can be wrong for tokens.
 
 ---
 
@@ -241,7 +252,8 @@ K is a routing address. The only invariant is the similarity geometry q_i·k_j.
 Any mutually exclusive partition of the vocabulary is a valid K-representation.
 
 HLLSet partition:  bit = 32·reg + tz,  reg uniform over 1024,
-                   tz geometric (P(tz=z) = 2^-(z+1)),  multiresolution.
+                   tz geometric (P(tz=z) = 2^-(z+1)),  multiresolution
+                   (hash prior; LUT TF field carries the empirical token counts).
 
 Resolution:        pairwise collision p = 1/3072;
                    multi-seed s: p^s (s=2 ⇒ 10⁻⁷, s=3 ⇒ 10⁻¹¹);

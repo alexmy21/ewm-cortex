@@ -45,29 +45,29 @@ HLLSet K-storage.
 ## 2. System overview
 
 ```text
-╔════════════════════════════ TOKEN REALM (traditional LLM) ════════════════════════════════╗
-║                                                                                             ║
-║  tokens ──▶ Embedding E ──▶ Transformer blocks ──▶ LM head ──▶ next-token distribution     ║
-║                 │                   ▲                                                        ║
-║                 │                   │ Q (learned)  V (learned)  FFN (learned)               ║
-║                 │                   │                                                        ║
-║                 └──── K-bridge ─────┘                                                        ║
-║                       (bit(t) via TokenLUT.forward)                                          ║
-╚═══════════════════════════════════════╤═════════════════════════════════════════════════════╝
+╔════════════════════════════ TOKEN REALM (traditional LLM) ═════════════════════════════════╗
+║                                                                                            ║
+║  tokens ──▶ Embedding E ──▶ Transformer blocks ──▶ LM head ──▶ next-token distribution ║
+║                 │                   ▲                                                      ║
+║                 │                   │ Q (learned)  V (learned)  FFN (learned)              ║
+║                 │                   │                                                      ║
+║                 └──── K-bridge ─────┘                                                      ║
+║                       (bit(t) via TokenLUT.forward)                                        ║
+╚═══════════════════════════════════════╤════════════════════════════════════════════════════╝
                                         │  I (ingest)              M (materialize)
 ╔═══════════════════════════════════════╧═════════════════════════════════════════════════════╗
-║                              HLLSET REALM (K-storage)                                         ║
-║                                                                                               ║
-║  HLLSet 32K-bit lattice  (join = OR, meet = AND, CIDs = SHA-1)                                ║
-║   ├─ TokenLUT     : forward token→(reg,tz) ; reverse (reg,tz)→[tokens]   (ordered streams)   ║
-║   ├─ CatalogLUT   : forward value→3 positions ; reverse + 2-of-3 quorum  (unordered streams)  ║
-║   ├─ DenseLUT     : 1024×32 array — key IS the address (FPGA path)                            ║
-║   ├─ Engines      : InMemory / DuckDB (register-range chunks) / FPGASim + Registry            ║
-║   └─ Context      : ConversationContext sub-lattice (top.hll_1/2/3, matrix, TokenIndex)       ║
-║                                                                                               ║
-║  K-storage interface: key_of(token) → KeyRef ; candidates(hllset) → tokens ;                 ║
-║                       confidence(hllset) → [0,1]                                              ║
-╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
+║                              HLLSET REALM (K-storage)                                       ║
+║                                                                                             ║
+║  HLLSet 32K-bit lattice  (join = OR, meet = AND, CIDs = SHA-1)                              ║
+║   ├─ TokenLUT     : forward token→(reg,tz) ; reverse (reg,tz)→[tokens]   (ordered streams)  ║
+║   ├─ CatalogLUT   : forward value→3 positions ; reverse + 2-of-3 quorum (unordered streams) ║
+║   ├─ DenseLUT     : 1024×32 array — key IS the address (FPGA path)                          ║
+║   ├─ Engines      : InMemory / DuckDB (register-range chunks) / FPGASim + Registry          ║
+║   └─ Context      : ConversationContext sub-lattice (top.hll_1/2/3, matrix, TokenIndex)     ║
+║                                                                                             ║
+║  K-storage interface: key_of(token) → KeyRef ; candidates(hllset) → tokens ;                ║
+║                       confidence(hllset) → [0,1]                                            ║
+╚═════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 The transformer never hashes tokens inside the model graph. It asks the
@@ -112,7 +112,7 @@ valid K-representation.
 Reuse existing crates without modification:
 
 | Component | Crate | Role |
-|-----------|-------|------|
+| ----------- | ------- | ------ |
 | `HLLSet`, hashing, `token_to_position` | `hllset-core` | partition assignment |
 | `TokenLUT`, `DenseLUT` | `hllset-dsl::materialize` | tier-1 K-storage (ordered) |
 | `CatalogLUT`, `materialize_homogeneous_consensus` | `hllset-dsl::materialize` | tier-2 K-storage (unordered) |
@@ -294,7 +294,7 @@ hand-rolled f32 matmul for the reproduction scale).
 ## 8. Invariants and test plan
 
 | # | Invariant | Check |
-|---|-----------|-------|
+| --- | ----------- | ------- |
 | 1 | Coverage: LUT ⊇ active bits of managed sub-lattice | `confidence(C) == 1.0` on every context |
 | 2 | Partition: every token has exactly one `(reg, tz)` | `TokenLUT.forward` total and deterministic |
 | 3 | Collision rate matches theory | observed group sizes ≈ `C(n,2)/3072` |
@@ -309,7 +309,7 @@ hand-rolled f32 matmul for the reproduction scale).
 ## 9. Risks and mitigations
 
 | Risk | Mitigation |
-|------|------------|
+| ------ | ------------ |
 | Address-key resolution too coarse for exact-token routing | `E_bit` gives one vector per cell; V and context disambiguate; multi-seed (`CatalogLUT`) restores exactness where needed |
 | Static `k_t = E_bit[bit(t)]` loses contextuality of K | add positional encoding (baseline already has it); Mode C hybrid restores learned contextual K |
 | Learned `E_bit` could "cheat" by re-deriving token identity | acceptable: the hypothesis is about the partition's sufficiency, not about freezing vectors; add Mode A pure-LSH variant as control |
