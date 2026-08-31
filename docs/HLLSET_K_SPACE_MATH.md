@@ -245,7 +245,68 @@ the gauge — `confidence = 1.0` iff coverage holds.
 
 ---
 
-## 8. One-page summary
+## 8. Context, MoE, and the Expert Think Tank
+
+Formal definitions of the LLM-context objects, per the 2026-08-28 session.
+
+**History and observation.** The history is an ordered sequence of original
+observations `H = S₁ … Sₜ`, each `Sᵢ ∈ L` an HLLSet. The recent observation
+window is `R(t) = ∪ { Sᵢ : t − m < i ≤ t }`.
+
+**1. LLM context — sub-lattice.** `C(t) = ∪ { Sᵢ : i ∈ I(t) }` for the
+most relevant observations `I(t)`. The generator is `G(t) = {Sᵢ}`; the
+context sub-lattice is its span `⟨G(t)⟩`; the stored object is the top
+`C(t)`. Connectedness means the overlap graph of `G(t)` (edges where
+`Sᵢ ∩ Sⱼ ≠ ∅`, or R-links `S_prev ∩ S_curr`) is connected.
+
+**2. MoE — convolution of the context sub-lattice.** Candidates are the
+original observations acquired in recent history (the temporal pyramid is
+used only as a *retrieval index*, never as frame structure). The
+candidates are shuffled by content address and convolved:
+
+```text
+π    = sort_by_sha1( { Sᵢ : recent } )       // IICA shuffle, time-unbiased
+F_k  = { S_π(i) : i ∈ [k·s, k·s + w) }       // convolution frame (width w, stride s)
+E_k  = ∪ F_k                                  // Expert
+MoE(t) = { E_k }
+```
+
+Multi-shuffle: `π_c = sort_by_sha1(Sᵢ ‖ salt_c)` gives independent MoE
+partitions for ensembling.
+
+**3. Expert.** `E_k = ∪ F_k` — the union of the HLLSets of one frame.
+Every object is used as a single HLLSet = union of its members.
+
+**4. Expert Think Tank.** Ordered by relevance to the recent observation:
+
+```text
+ρ(E) = BSSτ(E, R(t)) = |E ∩ R(t)| / |R(t)|     // pure BSS, no recency decay
+ETT(t) = { (E_k, ρ_k) }  sorted by ρ descending, ties broken by recency
+```
+
+Recency acts **only** at candidate extraction (the pyramid's recent
+window), not inside `ρ` and not in the frame grouping.
+
+**5. Expert Leader.** `EL(t) = E_{k*}` where `k* = argmax_k ρ_k`.
+
+**6. Resolution (A+B).** The final response sub-lattice is the thresholded
+union — the leader plus every expert above `τ_min`:
+
+```text
+F(t) = EL ∪ ( ∪ { E_k : ρ_k ≥ τ_min } )        // bitmap level (monotone, IICA)
+```
+
+Materialization then ranks tokens by the TF field so the leader's tokens
+dominate generation; the bitmap decides *what can be said*, the TF ranking
+decides *what is said first*.
+
+**Properties.** `F(t) ⊆ C(t)`, so `|F(t)|` is bounded by the context bits.
+The pipeline is monotone and IICA throughout; the coverage invariant
+(`confidence = 1.0`) is the precondition for materializing `F(t)`.
+
+---
+
+## 9. One-page summary
 
 ```text
 K is a routing address. The only invariant is the similarity geometry q_i·k_j.
@@ -268,4 +329,10 @@ Q,K,V:             Q = I(query),  K = context sub-lattice (stored in LUTs),
 
 Sub-lattice:       restriction is a lattice homomorphism; extraction is
                    deterministic, local, and precise under LUT coverage.
+
+Context/MoE:       C(t) = ∪ relevant Sᵢ (sub-lattice top); candidates from
+                   recent history via the pyramid as retrieval index only;
+                   π = sort_by_sha1(Sᵢ) — IICA shuffle; E_k = ∪ frame_k;
+                   ETT ranked by ρ = BSSτ(E_k, R(t)); EL = argmax;
+                   F(t) = EL ∪ { E_k : ρ_k ≥ τ_min }  (A+B resolution).
 ```

@@ -1,0 +1,11 @@
+[package]
+name = "cortex-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Enhanced hllset-cortex pipeline: encoding IDs -> HLLSet -> gate_TF -> TF-LUT -> materialize -> restored IDs (Rust port of the reference)"
+
+[dependencies]
+hllset-core = { workspace = true }
+hllset-attn = { workspace = true }

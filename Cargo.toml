@@ -10,6 +10,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # ── Experimental crates (this workspace) ──
+cortex-core = { path = "crates/cortex-core" }
 hllset-attn = { path = "crates/hllset-attn" }
 hllset-repro = { path = "crates/hllset-repro" }
 

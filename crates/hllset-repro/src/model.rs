@@ -310,6 +310,23 @@ impl Transformer {
         }
         out
     }
+
+    /// Average cross-entropy over every window of `data` (no training).
+    /// Used to evaluate on held-out (unknown) text.
+    pub fn eval_loss(&self, data: &[usize], block: usize) -> f32 {
+        assert!(data.len() > block, "not enough data for evaluation");
+        let mut total = 0.0f32;
+        let mut count = 0usize;
+        for start in 0..=data.len() - block - 1 {
+            let inputs = &data[start..start + block];
+            let targets = &data[start + 1..start + 1 + block];
+            let logits = self.forward(inputs);
+            let loss = crate::autograd::cross_entropy(&logits, targets);
+            total += loss.borrow().data[0];
+            count += 1;
+        }
+        total / count as f32
+    }
 }
 
 fn causal_mask(t: usize) -> Tensor {
@@ -454,5 +471,15 @@ mod tests {
         let first = losses[0];
         let last = *losses.last().unwrap();
         assert!(last < first * 0.5, "address-mode loss did not decrease: {first} -> {last}");
+    }
+
+    #[test]
+    fn eval_loss_is_finite_and_positive() {
+        let cfg = tiny_cfg();
+        let model = Transformer::new(cfg, 1);
+        let data: Vec<usize> = (0..40).map(|i| i % 10).collect();
+        let loss = model.eval_loss(&data, 8);
+        assert!(loss.is_finite());
+        assert!(loss >= 0.0);
     }
 }

@@ -39,6 +39,7 @@ pub mod bridge;
 pub mod context_vocab;
 pub mod hybrid;
 pub mod kstorage;
+pub mod moe;
 pub mod setkey;
 pub mod token_mask;
 
@@ -47,5 +48,6 @@ pub use bridge::KBridge;
 pub use context_vocab::{ContextVocabulary, VocabDelta};
 pub use hybrid::{hybrid_logits, hybrid_score, HybridConfig};
 pub use kstorage::{CatalogLutStorage, KStorage, KeyRef, TokenLutStorage};
+pub use moe::{Expert, MoE, Observation, RankedExpert};
 pub use setkey::{bss_coverage, bss_symmetric, jaccard, overlap};
 pub use token_mask::TokenMask;

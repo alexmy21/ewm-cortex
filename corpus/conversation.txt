@@ -1,0 +1,21 @@
+In attention the only computed quantity is the dot product between a query and a key. The labels attached to keys are not invariants of the mechanism. Any mutually exclusive partition of the vocabulary can serve as a key representation. An ontology is one partition and the hash partition is another. The only genuine constraint on the key space is that it supports the routing geometry the task needs.
+
+The HLLSet partition assigns each token to one bit cell. The register is the low ten bits of the murmur hash and the trailing zeros come from the remaining bits. The trailing zero distribution is geometric so the partition is multiresolution. Low trailing zero cells are broad and high trailing zero cells are mostly singletons. This is the hash prior and the term frequency field in the lookup table carries the empirical token counts.
+
+The pairwise collision probability of the partition is one over three thousand seventy two. Two random tokens share a cell with that probability. Multi seed hashing with three seeds makes membership exact through a two of three quorum. A small active sub vocabulary has few expected collisions because the count grows quadratically with the number of tokens.
+
+The ingestion and materialization morphisms form a Galois connection. Ingestion is the left adjoint and materialization is the right adjoint. The composite of materialization after ingestion is a closure operator on the token realm. The composite of ingestion after materialization is the identity on the materializable sub lattice. Union is exact and intersection is conservative because two different tokens can collide on one bit.
+
+The context vocabulary evolves through commits. The new bits carry the unknown vocabulary and the departed bits carry the removed vocabulary. The update rule is to remove the materialization of the departed set and add the materialization of the new set. The lookup table is append only because departed tokens must stay resolvable. The vocabulary view forgets on departure but the lattice forgets nothing.
+
+Two gates sit over one lookup table. The bit gate is the context HLLSet and the hash gate is the token mask. The mask stores content addresses instead of token bytes so the vocabulary can never drift out of sync with the storage. Bytes exist once in the lookup table and every query resolves through it.
+
+The reproduction transformer lives in the token realm with learned queries and values. The address key model replaces the learned key projection with a learned table over the bit cells. Training on a small corpus shows the address keys reproduce the baseline with a gap just above one percent. The hand rolled autograd engine computes gradients for matrix products and layer norms and cross entropy.
+
+The context is a sub lattice of the most relevant HLLSets in the whole history. The mixture of experts is a convolution of the context sub lattice. The convolution frames are formed over the original observations after a content address shuffle. The temporal pyramid is only a retrieval index for recent candidates and never a frame structure. Each expert is the union of one convolution frame.
+
+The expert think tank ranks the experts by pure BSS coverage of the recent observation. The expert leader is the most relevant expert. The resolution is the thresholded union of the leader and the experts above the relevance threshold. Materialization ranks the tokens by term frequency so the leader dominates the generation. The final sub lattice is monotone and content addressed and bounded by the context bits.
+
+A small transformer can be trained end to end on this conversation and tested on unknown text. The test split is held out and the model has never seen it during training. The average loss on the held out text measures how well the routing geometry generalizes. The hybrid gate boosts the tokens whose bits are present in the resolved context. The gate changes the scores but keeps the lattice monotone.
+
+The next phase adds multi seed exactness and the chunked engines and the persisted content addresses. The canonical framework stays clean while the experimental workspace consumes it by path. When the results are validated they can be merged back into the canonical project. The boundary between the token realm and the lattice realm is the single point of discipline.

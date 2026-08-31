@@ -241,15 +241,32 @@ is a direct measurement of "the HLLSet partition serves as K."
 
 ### Phase 3 — Set-key and hybrid (Modes B, C)
 
-- Implement `φ` (BSS/Jaccard) over the context sub-lattice and the hybrid
-  score.
-- Use `hllset-context::ConversationContext` as the context sub-lattice
-  manager; `suggest_continuations` becomes the retrieval baseline to beat.
-- Run ablations: `λ = 0` vs `λ > 0`; pure Mode B vs Mode A.
+The context side follows the formal definitions of
+`HLLSET_K_SPACE_MATH.md` §8:
 
-**Exit criteria:** hybrid model matches or exceeds Mode A on next-token
-prediction, and Mode B alone achieves non-trivial retrieval accuracy
-(reproduction of CAAL results).
+- **Candidates** — original observation HLLSets from recent history
+  (temporal pyramid used as retrieval index only).
+- **MoE** — convolve the candidates after an IICA shuffle by SHA1:
+  `π = sort_by_sha1(Sᵢ)`, `E_k = ∪ frame_k` (width `w`, stride `s`).
+- **ETT / EL** — rank experts by pure BSS coverage of the recent
+  observation `R(t)`: `ρ(E) = BSSτ(E, R(t))`; `EL = argmax`.
+- **Resolution (A+B)** — `F(t) = EL ∪ { E_k : ρ_k ≥ τ_min }` (bitmap),
+  then materialize with TF-ranked tokens so the leader dominates.
+
+Implementation:
+
+- Add `hllset-attn::moe` (`Expert`, `MoE`, `ETT`, `expert_leader`,
+  `resolve`) with the SHA1 shuffle.
+- Implement `φ` (BSS/Jaccard) over `F(t)` and the hybrid score
+  `q·k + λ·φ(Q_hll, F(t))`.
+- Harness (`bin/phase3`): build a conversation history of sentence
+  HLLSets, compute MoE/ETT/EL/resolution, materialize `F(t)`, and blend
+  transformer next-token logits with BSS-ranked candidates.
+- Run ablations: `λ = 0` vs `λ > 0`; pure Mode B (retrieval) vs Mode A.
+
+**Exit criteria:** the hybrid ranking matches or exceeds Mode A on
+next-token prediction, and Mode B alone achieves non-trivial retrieval
+accuracy (reproduction of CAAL results).
 
 ### Phase 4 — Multi-seed, backends, persistence
 
