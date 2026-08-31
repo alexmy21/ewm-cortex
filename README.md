@@ -16,10 +16,10 @@ DeepSeek-OCR Encoder                     DeepSeek-OCR Decoder
       │ encoding IDs (tid{n})                 ▲ restored IDs
       ▼                                       │
 ╔══════════════════════════════════════════════════════════╗
-║                    ewm-cortex (Rust workspace)            ║
-║  cortex-core   : ids → HLLSet → ∩ gate_TF → TF-LUT → ids  ║
-║  cortex-context: MoE/ETT → EL → Resolution A+B → F(t)     ║
-╚══════════════════════════════════════════════════════════════╝
+║                    ewm-cortex (Rust workspace)           ║
+║  cortex-core   : ids → HLLSet → ∩ gate_TF → TF-LUT → ids ║
+║  cortex-context: MoE/ETT → EL → Resolution A+B → F(t)    ║
+╚══════════════════════════════════════════════════════════╝
 ```
 
 ## Layout
