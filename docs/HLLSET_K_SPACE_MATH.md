@@ -260,12 +260,15 @@ context sub-lattice is its span `⟨G(t)⟩`; the stored object is the top
 `Sᵢ ∩ Sⱼ ≠ ∅`, or R-links `S_prev ∩ S_curr`) is connected.
 
 **2. MoE — convolution of the context sub-lattice.** Candidates are the
-original observations acquired in recent history (the temporal pyramid is
-used only as a *retrieval index*, never as frame structure). The
-candidates are shuffled by content address and convolved:
+original observations of recent history, retrieved through the
+**content-addressed evolution store** (`ewm-git`): recent history is the
+set of commits reachable from `HEAD`; the commit hash is the timer and the
+commit state is the union HLLSet. The temporal pyramid is replaced by this
+store and is no longer used for grouping. Candidates are shuffled by
+content address and convolved:
 
 ```text
-π    = sort_by_sha1( { Sᵢ : recent } )       // IICA shuffle, time-unbiased
+π    = sort_by_sha1( { Sᵢ : reachable from HEAD } )   // IICA shuffle
 F_k  = { S_π(i) : i ∈ [k·s, k·s + w) }       // convolution frame (width w, stride s)
 E_k  = ∪ F_k                                  // Expert
 MoE(t) = { E_k }
@@ -284,8 +287,8 @@ Every object is used as a single HLLSet = union of its members.
 ETT(t) = { (E_k, ρ_k) }  sorted by ρ descending, ties broken by recency
 ```
 
-Recency acts **only** at candidate extraction (the pyramid's recent
-window), not inside `ρ` and not in the frame grouping.
+Recency acts **only** at candidate extraction (the commit DAG's reachable
+window from `HEAD`), not inside `ρ` and not in the frame grouping.
 
 **5. Expert Leader.** `EL(t) = E_{k*}` where `k* = argmax_k ρ_k`.
 
@@ -296,9 +299,10 @@ union — the leader plus every expert above `τ_min`:
 F(t) = EL ∪ ( ∪ { E_k : ρ_k ≥ τ_min } )        // bitmap level (monotone, IICA)
 ```
 
-Materialization then ranks tokens by the TF field so the leader's tokens
-dominate generation; the bitmap decides *what can be said*, the TF ranking
-decides *what is said first*.
+Materialization resolves `F(t)` by collection intersection per bit (TF
+only breaks collision ties); the OUTPUT is then ranked by the TF field so
+the leader's tokens dominate generation — the bitmap decides *what can be
+said*, the TF ranking decides *what is said first*.
 
 **Properties.** `F(t) ⊆ C(t)`, so `|F(t)|` is bounded by the context bits.
 The pipeline is monotone and IICA throughout; the coverage invariant
@@ -331,8 +335,12 @@ Sub-lattice:       restriction is a lattice homomorphism; extraction is
                    deterministic, local, and precise under LUT coverage.
 
 Context/MoE:       C(t) = ∪ relevant Sᵢ (sub-lattice top); candidates from
-                   recent history via the pyramid as retrieval index only;
+                   recent history via the ewm-git commit DAG (HEAD reachable);
                    π = sort_by_sha1(Sᵢ) — IICA shuffle; E_k = ∪ frame_k;
                    ETT ranked by ρ = BSSτ(E_k, R(t)); EL = argmax;
                    F(t) = EL ∪ { E_k : ρ_k ≥ τ_min }  (A+B resolution).
+
+Evolution:         ewm-git replaces the temporal pyramid; commit = timer,
+                   commit state = union HLLSet, merge = lattice join,
+                   H(t) = (S(t), H(t-1), D, R, N), pruning = GC.
 ```

@@ -13,11 +13,11 @@ use hllset_core::core::hashing::{
     token_to_position_seeded,
 };
 use hllset_core::{BITS_PER_REG, HLLSet};
-use hllset_dsl::materialize::{
+use hllset_materialize::{
     materialize_homogeneous_consensus, materialize_inlut, CatalogLUT, TokenLUT,
 };
 
-/// Default catalog seeds (G1 convention), mirroring `hllset-dsl`.
+/// Default catalog seeds (G1 convention), mirroring `hllset-materialize`.
 pub const DEFAULT_CATALOG_SEEDS: [u64; 3] = [0, 1, 2];
 
 /// A key reference into the HLLSet realm.

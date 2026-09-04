@@ -1,9 +1,13 @@
-//! `gate_TF` — the decoder-vocabulary sketch gate.
+//! `gate_TF` — the output TokenGate (decoder-vocabulary limit).
 //!
-//! Built once from the decoder's valid encoding-ID vocabulary and applied
-//! at the lattice level by intersection: `doc ∩ gate_TF`. The sketch gate is
-//! a probabilistic filter; the authoritative membership check is the exact
-//! LUT forward map (`Gate::exact_known`), per the reference design.
+//! Built once from the decoder's valid encoding-ID vocabulary. The gate acts
+//! **only on the output**: materialized IDs are filtered to the vocabulary,
+//! and out-of-vocab IDs are reported. The authoritative membership check is
+//! the exact vocabulary list (`Gate::exact_known`) — 0 leak / 0 FN.
+//!
+//! A sketch HLLSet (`HLLSet::from_tokens(vocab)`) is kept as an optional
+//! bit-level pre-filter for future extensions, but it is NOT part of the
+//! main path — the LUT and TF-LUT are never gated.
 
 use hllset_core::HLLSet;
 
@@ -11,7 +15,7 @@ use hllset_core::HLLSet;
 /// exact membership list.
 #[derive(Clone, Debug)]
 pub struct Gate {
-    /// `HLLSet::from_tokens(valid ids)` — the sketch gate.
+    /// `HLLSet::from_tokens(valid ids)` — optional sketch pre-filter.
     pub hllset: HLLSet,
     /// Sorted valid encoding IDs (exact membership, `0 leak / 0 FN`).
     vocab: Vec<Vec<u8>>,
@@ -36,7 +40,29 @@ impl Gate {
         self.vocab.binary_search_by(|v| v.as_slice().cmp(id)).is_ok()
     }
 
-    /// Apply the sketch gate: `doc ∩ gate_TF`.
+    /// The output TokenGate: keep only the materialized IDs that are in the
+    /// decoder vocabulary.
+    ///
+    /// This is the only place the gate acts in the main pipeline — the LUT
+    /// and TF-LUT are never gated, only the restored output is.
+    pub fn filter_tokens(&self, ids: &[Vec<u8>]) -> Vec<Vec<u8>> {
+        ids.iter()
+            .filter(|id| self.exact_known(id))
+            .cloned()
+            .collect()
+    }
+
+    /// The out-of-vocab IDs among the materialized tokens (reported, never
+    /// silently dropped).
+    pub fn out_of_vocab(&self, ids: &[Vec<u8>]) -> Vec<Vec<u8>> {
+        ids.iter()
+            .filter(|id| !self.exact_known(id))
+            .cloned()
+            .collect()
+    }
+
+    /// The sketch gate `doc ∩ gate_TF` — an optional bit-level pre-filter
+    /// for future extensions; NOT part of the main (output-gated) path.
     pub fn apply(&self, doc: &HLLSet) -> HLLSet {
         doc.intersection(&self.hllset)
     }

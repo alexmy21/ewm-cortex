@@ -3,20 +3,27 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["ewm-cortex project"]
 license = "MIT"
 
 [workspace.dependencies]
-# ── Experimental crates (this workspace) ──
+# ── ewm-cortex crates (first-party, self-contained) ──
 cortex-core = { path = "crates/cortex-core" }
+ewm-git = { path = "crates/ewm-git" }
 hllset-attn = { path = "crates/hllset-attn" }
+hllset-core = { path = "crates/hllset-core" }
+hllset-materialize = { path = "crates/hllset-materialize" }
 hllset-repro = { path = "crates/hllset-repro" }
 
-# ── Canonical HLLSet framework (path to hllset-next; not modified here) ──
-hllset-core = { path = "../hllset-next/crates/hllset-core" }
-hllset-dsl = { path = "../hllset-next/crates/hllset-dsl" }
+# ── External (crates.io only; no path deps outside this workspace) ──
+murmur3 = "0.5"
+sha1 = "0.10"
+hex = "0.4"
+roaring = { version = "0.10", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [profile.dev]
 opt-level = 1

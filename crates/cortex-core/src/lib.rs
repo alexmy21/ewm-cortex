@@ -5,14 +5,14 @@
 //! ewm-cortex primitives:
 //!
 //! ```text
-//! encoding IDs → HLLSet → ∩ gate_TF → TF-LUT → materialize → restored IDs
+//! tokens → hash → tokenLUT → HLLSet → materialize → gate_TF → restored → decoder
 //! ```
 //!
 //! Modules:
 //!
 //! - [`encoding`] — simulated `tid{n}` encoder/decoder (opaque IDs only)
-//! - [`gate`] — `gate_TF` sketch gate + exact membership
-//! - [`lut`] — monotonic TF reverse index (TF-ranked materialization)
+//! - [`gate`] — `gate_TF` output TokenGate (decoder-vocabulary limit) + exact membership
+//! - [`lut`] — monotonic TF reverse index (collection intersection per bit; TF only on collision ties)
 //! - [`pipeline`] — the [`CortexPipeline`] black box
 
 pub mod encoding;

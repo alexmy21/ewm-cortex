@@ -251,7 +251,8 @@ The context side follows the formal definitions of
 - **ETT / EL** — rank experts by pure BSS coverage of the recent
   observation `R(t)`: `ρ(E) = BSSτ(E, R(t))`; `EL = argmax`.
 - **Resolution (A+B)** — `F(t) = EL ∪ { E_k : ρ_k ≥ τ_min }` (bitmap),
-  then materialize with TF-ranked tokens so the leader dominates.
+  then materialize by collection intersection (TF only on collisions)
+  and rank the output so the leader dominates.
 
 Implementation:
 

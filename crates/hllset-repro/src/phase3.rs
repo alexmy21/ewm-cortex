@@ -7,8 +7,9 @@
 //! 2. MoE = convolution after the SHA1 IICA shuffle;
 //! 3. ETT / EL by pure BSS coverage of the recent observation;
 //! 4. resolution A: `F(t) = EL ∪ { E_k : ρ_k ≥ τ_min }`;
-//! 5. resolution B: materialize `F(t)` and TF-rank the tokens by their
-//!    frequency in the source sentences of the included experts.
+//! 5. resolution B: materialize `F(t)` (collection intersection per bit),
+//!    then rank the OUTPUT tokens by their frequency in the source
+//!    sentences of the included experts.
 
 use std::collections::HashMap;
 
@@ -24,7 +25,8 @@ pub struct Phase3Report {
     pub leader_relevance: f64,
     pub resolved_bits: u64,
     pub resolved_tokens: usize,
-    /// TF-ranked tokens from the resolved sub-lattice (resolution B).
+    /// OUTPUT-ranked tokens from the resolved sub-lattice (resolution B):
+    /// ranked by their frequency in the included experts' source sentences.
     pub top_tokens: Vec<(String, usize)>,
     /// LUT coverage over `F(t)` (invariant: 1.0).
     pub coverage: f64,
@@ -72,8 +74,9 @@ pub fn run_phase3(
     let leader = &ett[0];
     let resolved = moe.resolve(&recent, tau_min);
 
-    // Resolution B: TF-rank the materialized tokens by their frequency in
-    // the source sentences of the included experts (leader + ρ ≥ τ_min).
+    // Resolution B: after materialization (collection intersection per
+    // bit), rank the OUTPUT tokens by their frequency in the source
+    // sentences of the included experts (leader + ρ ≥ τ_min).
     let mut included_indices: Vec<usize> = Vec::new();
     for ranked in &ett {
         if included_indices.is_empty() || ranked.relevance >= tau_min {

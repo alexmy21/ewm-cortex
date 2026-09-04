@@ -29,18 +29,18 @@ fn main() {
     let restored_text = codec.decode_ids(&result.restored_ids);
 
     println!("cortex-core — enhanced hllset-cortex pipeline");
-    println!("  file           : {path}");
-    println!("  words          : {}", ids.len());
-    println!("  vocab (gate)   : {}", codec.vocab().len());
-    println!("  doc bits       : {}", result.doc_bits);
-    println!("  gated bits     : {}", result.gated_bits);
-    println!("  restored ids   : {}", result.restored_ids.len());
-    println!("  leaks          : {} {}", result.leaks.len(), if result.ok() { "✓" } else { "✗" });
-    println!("  coverage       : {:.2}", result.coverage);
-    println!("  LUT size       : {}", pipeline.lut_len());
-    println!("  passes         : {}", pipeline.processed());
+    println!("  file            : {path}");
+    println!("  words           : {}", ids.len());
+    println!("  vocab (gate)    : {}", codec.vocab().len());
+    println!("  doc bits        : {}", result.doc_bits);
+    println!("  materialized    : {} (ungated, from the full HLLSet)", result.materialized_ids.len());
+    println!("  restored ids    : {} (after output TokenGate)", result.restored_ids.len());
+    println!("  leaks (OOV)     : {} {}", result.leaks.len(), if result.ok() { "✓" } else { "✗" });
+    println!("  coverage        : {:.2}", result.coverage);
+    println!("  LUT size        : {}", pipeline.lut_len());
+    println!("  passes          : {}", pipeline.processed());
     println!();
-    println!("  reconstructed (bag of words, TF-ranked):");
+    println!("  reconstructed (bag of words, bit order):");
     let preview: String = restored_text.chars().take(200).collect();
     println!("  {preview}…");
 }

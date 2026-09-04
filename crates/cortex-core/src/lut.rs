@@ -5,7 +5,7 @@
 //!
 //! - `register` interns an encoding ID in the append-only LUT;
 //! - `observe` accumulates per-ID term frequency from ingested inputs
-//!   (monotonic, pre-gate);
+//!   (monotonic, **ungated** — the LUT is never filtered);
 //! - `materialize` resolves an HLLSet through the LUT and ranks the
 //!   candidates by TF (ties broken by byte order).
 
@@ -51,15 +51,35 @@ impl TfLut {
         self.tf.contains_key(id)
     }
 
-    /// Materialize an HLLSet through the LUT, TF-ranked (ties: byte order).
+    /// Materialize an HLLSet through the LUT.
+    ///
+    /// The primary filter is the token collection per bit: for each set
+    /// bit, the LUT yields its candidate collection. If exactly one token
+    /// is a candidate, it is chosen. **Only when a hash collision leaves
+    /// more than one token for a bit** does TF select the winner (ties:
+    /// byte order). The output is in bit order, not TF order.
     pub fn materialize(&self, hllset: &HLLSet) -> Vec<Vec<u8>> {
-        let mut candidates = self.storage.candidates(hllset);
-        candidates.sort_by(|a, b| {
-            self.tf(b)
-                .cmp(&self.tf(a))
-                .then_with(|| a.cmp(b))
-        });
-        candidates
+        let mut out = Vec::new();
+        for (reg, zeros) in hllset.active_positions() {
+            if let Some(candidates) = self.storage.lut().get(reg, zeros) {
+                match candidates.as_slice() {
+                    [] => {}
+                    [single] => out.push(single.clone()),
+                    many => {
+                        // Collision group: TF disambiguates.
+                        let best = many.iter().min_by(|a, b| {
+                            self.tf(b)
+                                .cmp(&self.tf(a))
+                                .then_with(|| a.cmp(b))
+                        });
+                        if let Some(best) = best {
+                            out.push(best.clone());
+                        }
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// Coverage gauge over `hllset` (1.0 iff every bit resolves).
@@ -81,16 +101,48 @@ impl TfLut {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hllset_core::core::hashing::token_to_position;
+    use std::collections::HashMap;
+
+    /// Brute-force a pair of distinct tokens that hash to the same bit.
+    fn collision_pair() -> (Vec<u8>, Vec<u8>) {
+        let mut seen: HashMap<(u32, u32), Vec<u8>> = HashMap::new();
+        for i in 0..200_000u32 {
+            let token = format!("tok{i}").into_bytes();
+            let pos = token_to_position(&token);
+            if let Some(first) = seen.get(&pos) {
+                return (first.clone(), token);
+            }
+            seen.insert(pos, token);
+        }
+        panic!("no collision found");
+    }
 
     #[test]
-    fn tf_ranking_orders_materialization() {
+    fn single_candidate_bits_resolve_without_tf() {
         let mut lut = TfLut::new();
-        lut.observe(&[b"a".to_vec(), b"a".to_vec(), b"a".to_vec(), b"b".to_vec()]);
-        let doc = HLLSet::from_tokens(&[b"a".as_slice(), b"b".as_slice()]);
+        lut.observe(&[b"alpha".to_vec(), b"beta".to_vec(), b"gamma".to_vec()]);
+        let doc = HLLSet::from_tokens(&[b"alpha".as_slice(), b"beta".as_slice()]);
         let restored = lut.materialize(&doc);
-        assert_eq!(restored, vec![b"a".to_vec(), b"b".to_vec()]);
-        assert_eq!(lut.tf(b"a"), 3);
-        assert_eq!(lut.tf(b"b"), 1);
+        // Both resolve (barring an astronomically unlikely collision here).
+        assert!(restored.contains(&b"alpha".to_vec()));
+        assert!(restored.contains(&b"beta".to_vec()));
+        assert!(!restored.contains(&b"gamma".to_vec()));
+    }
+
+    #[test]
+    fn tf_only_breaks_collision_ties() {
+        let (a, b) = collision_pair();
+        let mut lut = TfLut::new();
+        // a is observed three times, b once — both collide on one bit.
+        lut.observe(&[a.clone(), a.clone(), a.clone(), b.clone()]);
+        let doc = HLLSet::from_tokens([a.as_slice()]);
+        let restored = lut.materialize(&doc);
+        // The bit resolves to exactly one token: the higher-TF one.
+        assert_eq!(restored, vec![a.clone()]);
+        assert!(!restored.contains(&b));
+        assert_eq!(lut.tf(&a), 3);
+        assert_eq!(lut.tf(&b), 1);
     }
 
     #[test]

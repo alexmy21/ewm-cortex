@@ -33,7 +33,7 @@ fn main() {
     println!("  F(t) bits    : {}", report.resolved_bits);
     println!("  F(t) tokens  : {}", report.resolved_tokens);
     println!("  coverage     : {:.2} {}", report.coverage, if report.coverage == 1.0 { "✓" } else { "✗" });
-    println!("  top tokens (TF-ranked, resolution B):");
+    println!("  top tokens (output ranking, resolution B):");
     for (token, count) in &report.top_tokens {
         println!("    {token:>10} ×{count}");
     }

@@ -1,10 +1,10 @@
 [package]
-name = "hllset-attn"
+name = "ewm-git"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "HLLSet K-storage for attention: KStorage trait over TokenLUT/CatalogLUT, bit key table, and HLLSet-native attention scores"
+description = "Minimal 2005-style Git as the content-addressed evolution store for HLLSets (replaces the temporal pyramid)"
 
 [dependencies]
 hllset-core = { workspace = true }
